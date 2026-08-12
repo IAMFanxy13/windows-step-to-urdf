@@ -19,12 +19,15 @@ const FORBIDDEN_EXTENSIONS = new Set([
   ['.sld', 'prt'].join(''),
   '.zip',
 ]);
-const ALLOWED_STEP = 'public/examples/two_joint_servo_arm_ap242.step';
+const ALLOWED_STEP_FILES = new Set([
+  'public/examples/two_joint_servo_arm_ap242.step',
+  'third_party/adafruit_sg51r/2201_submicro_servo_sg51r.step',
+]);
 const MAX_FILE_BYTES = 25 * 1024 * 1024;
 
 function walk(root, directory = root) {
   return fs.readdirSync(directory, { withFileTypes: true }).flatMap(entry => {
-    if (entry.isDirectory() && IGNORED_DIRECTORIES.has(entry.name)) return [];
+    if (IGNORED_DIRECTORIES.has(entry.name)) return [];
     const absolute = path.join(directory, entry.name);
     if (entry.isSymbolicLink()) return [{ absolute, symbolicLink: true }];
     return entry.isDirectory() ? walk(root, absolute) : [{ absolute, symbolicLink: false }];
@@ -66,8 +69,8 @@ export function scanReleaseTree(inputRoot) {
     if (FORBIDDEN_EXTENSIONS.has(extension)) {
       issues.push({ code: 'FORBIDDEN_FILE_TYPE', path: name, message: `Retired or archive file type: ${extension}` });
     }
-    if (['.step', '.stp'].includes(extension) && lowerName !== ALLOWED_STEP) {
-      issues.push({ code: 'UNAPPROVED_STEP', path: name, message: 'Only the generated public example STEP is allowed.' });
+    if (['.step', '.stp'].includes(extension) && !ALLOWED_STEP_FILES.has(lowerName)) {
+      issues.push({ code: 'UNAPPROVED_STEP', path: name, message: 'STEP file is not on the public release allowlist.' });
     }
     if (stat.size > MAX_FILE_BYTES) {
       issues.push({ code: 'LARGE_FILE', path: name, message: `File is ${(stat.size / 1024 / 1024).toFixed(1)} MiB.` });

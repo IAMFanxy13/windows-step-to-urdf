@@ -1,3 +1,4 @@
+import crypto from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
 import { describe, expect, it } from 'vitest';
@@ -13,6 +14,16 @@ function sourceFiles(directory) {
     const target = path.join(directory, entry.name);
     return entry.isDirectory() ? sourceFiles(target) : [target];
   }).filter(file => /\.(?:html|js|mjs|py|ps1|json)$/i.test(file));
+}
+
+function stepFiles(directory) {
+  const ignored = new Set(['.git', '.runtime', '.venv', 'dist', 'node_modules']);
+  return fs.readdirSync(directory, { withFileTypes: true }).flatMap(entry => {
+    if (entry.isDirectory() && ignored.has(entry.name)) return [];
+    const target = path.join(directory, entry.name);
+    if (entry.isDirectory()) return stepFiles(target);
+    return /\.(?:step|stp)$/i.test(entry.name) ? [target] : [];
+  });
 }
 
 describe('public release boundary', () => {
@@ -39,13 +50,25 @@ describe('public release boundary', () => {
     }
   });
 
-  it('contains only the generated public STEP example', () => {
+  it('contains only the generated example and the pinned licensed servo source', () => {
     const publicRoot = path.join(root, 'public');
-    const stepFiles = fs.readdirSync(path.join(publicRoot, 'examples'))
-      .filter(name => /\.(step|stp)$/i.test(name));
+    const permitted = [
+      'public/examples/two_joint_servo_arm_ap242.step',
+      'third_party/adafruit_sg51r/2201_Submicro_Servo_SG51R.step',
+    ];
+    const discovered = stepFiles(root)
+      .map(file => path.relative(root, file).replaceAll('\\', '/'))
+      .sort();
 
-    expect(stepFiles).toEqual(['two_joint_servo_arm_ap242.step']);
+    expect(discovered).toEqual(permitted);
     expect(fs.existsSync(path.join(publicRoot, 'robot'))).toBe(false);
+
+    const pinnedServo = path.join(root, permitted[1]);
+    expect(fs.existsSync(pinnedServo)).toBe(true);
+    if (fs.existsSync(pinnedServo)) {
+      const checksum = crypto.createHash('sha256').update(fs.readFileSync(pinnedServo)).digest('hex');
+      expect(checksum).toBe('66fa3c9570de91e698b0077e20adc652eaf3e21f98db499cfc4980c35e740013');
+    }
   });
 
   it('contains no private-product or retired-CAD implementation in production sources', () => {

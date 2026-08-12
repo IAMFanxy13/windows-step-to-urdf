@@ -23,6 +23,14 @@ describe('public release scanner', () => {
     expect(scanReleaseTree(fixture()).issues).toEqual([]);
   });
 
+  it('ignores the Git pointer file used by linked worktrees', () => {
+    const root = fixture();
+    const gitDirectory = ['C:', 'Users', 'example', 'repository', '.git', 'worktrees', 'feature'].join('/');
+    fs.writeFileSync(path.join(root, '.git'), `gitdir: ${gitDirectory}\n`);
+
+    expect(scanReleaseTree(root).issues).toEqual([]);
+  });
+
   it('blocks retired CAD files and local absolute paths', () => {
     const root = fixture();
     fs.writeFileSync(path.join(root, `private.${['sld', 'prt'].join('')}`), 'binary');
