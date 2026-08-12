@@ -27,6 +27,8 @@ describe('public release scanner', () => {
     const root = fixture();
     const gitDirectory = ['C:', 'Users', 'example', 'repository', '.git', 'worktrees', 'feature'].join('/');
     fs.writeFileSync(path.join(root, '.git'), `gitdir: ${gitDirectory}\n`);
+    fs.mkdirSync(path.join(root, '.worktrees', 'feature'), { recursive: true });
+    fs.writeFileSync(path.join(root, '.worktrees', 'feature', 'temporary.step'), 'worktree-local fixture');
 
     expect(scanReleaseTree(root).issues).toEqual([]);
   });

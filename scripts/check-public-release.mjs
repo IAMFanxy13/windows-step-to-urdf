@@ -3,7 +3,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const IGNORED_DIRECTORIES = new Set([
-  '.git', '.runtime', '.venv', 'dist', 'jobs', 'node_modules', 'playwright-report', 'test-results', '__pycache__',
+  '.git', '.runtime', '.venv', '.worktrees', 'dist', 'jobs', 'node_modules', 'playwright-report', 'test-results', '__pycache__',
 ]);
 const TEXT_EXTENSIONS = new Set([
   '', '.css', '.html', '.js', '.json', '.md', '.mjs', '.ps1', '.py', '.txt', '.xml', '.yaml', '.yml',
