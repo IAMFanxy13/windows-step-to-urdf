@@ -1,0 +1,17 @@
+name: Feature request
+description: Propose a scoped workflow or accuracy improvement.
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: User problem
+    validations:
+      required: true
+  - type: textarea
+    id: evidence
+    attributes:
+      label: Existing methods or evidence
+  - type: textarea
+    id: boundary
+    attributes:
+      label: Accuracy, safety and out-of-scope impact

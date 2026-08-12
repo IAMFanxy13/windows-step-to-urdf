@@ -1,0 +1,4 @@
+# Exact, headless Windows STEP/B-Rep runtime used by scripts/step_import_worker.py.
+# The no-VTK wheel keeps the standalone converter smaller; the XCAF/B-Rep API
+# surface is identical for the calls made by this project.
+cadquery-ocp-novtk==7.9.3.1.1

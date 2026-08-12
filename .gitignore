@@ -1,0 +1,15 @@
+node_modules/
+.venv/
+.runtime/
+jobs/
+dist/
+playwright-report/
+test-results/
+reports/
+__pycache__/
+*.py[cod]
+*.log
+*.zip
+.env
+.env.*
+!.env.example

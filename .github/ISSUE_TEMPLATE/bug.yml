@@ -1,0 +1,26 @@
+name: Bug report
+description: Report a reproducible error without uploading private CAD.
+body:
+  - type: textarea
+    id: behavior
+    attributes:
+      label: What happened and what did you expect?
+    validations:
+      required: true
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Minimal reproduction
+    validations:
+      required: true
+  - type: textarea
+    id: environment
+    attributes:
+      label: Version and environment
+  - type: checkboxes
+    id: privacy
+    attributes:
+      label: Privacy
+      options:
+        - label: I removed private models, names, paths, tokens and other confidential data.
+          required: true

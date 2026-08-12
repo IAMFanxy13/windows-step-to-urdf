@@ -1,0 +1,40 @@
+{
+  "name": "windows-step-to-urdf",
+  "version": "0.3.0-rc.1",
+  "private": true,
+  "description": "Local-first Windows STEP assembly to URDF workbench with explainable servo and kinematic review.",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/IAMFanxy13/windows-step-to-urdf.git"
+  },
+  "homepage": "https://github.com/IAMFanxy13/windows-step-to-urdf#readme",
+  "bugs": {
+    "url": "https://github.com/IAMFanxy13/windows-step-to-urdf/issues"
+  },
+  "license": "Apache-2.0",
+  "keywords": ["step", "urdf", "robotics", "cad", "opencascade", "threejs"],
+  "type": "module",
+  "scripts": {
+    "test": "vitest run",
+    "test:python": "python -m unittest discover -s test -p \"test_*.py\"",
+    "dev": "vite --config vite.config.mjs --host 127.0.0.1",
+    "build": "vite --config vite.config.mjs build",
+    "test:e2e": "playwright test",
+    "release:check": "node scripts/check-public-release.mjs .",
+    "verify": "npm test && npm run test:python && npm run build && npm run test:e2e && npm run release:check"
+  },
+  "dependencies": {
+    "csv-parse": "^6.1.0",
+    "fast-xml-parser": "^5.3.6",
+    "three": "^0.164.1",
+    "three-mesh-bvh": "^0.9.13",
+    "urdf-loader": "0.13.1",
+    "yaml": "^2.8.1"
+  },
+  "devDependencies": {
+    "@axe-core/playwright": "^4.12.1",
+    "@playwright/test": "^1.62.1",
+    "vite": "^8.0.16",
+    "vitest": "^4.1.8"
+  }
+}

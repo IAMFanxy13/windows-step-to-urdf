@@ -1,0 +1,8 @@
+* text=auto eol=lf
+*.cmd text eol=crlf
+*.ps1 text eol=crlf
+*.stl binary
+*.step binary
+*.stp binary
+*.png binary
+*.zip binary

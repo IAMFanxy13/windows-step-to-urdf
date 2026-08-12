@@ -1,0 +1,110 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Windows STEP → URDF 工作台</title>
+  </head>
+  <body>
+    <main id="app">
+      <section id="viewport" aria-label="STEP 与 URDF 三维视窗"></section>
+      <aside id="controls" aria-label="STEP to URDF 控制区">
+        <header class="product-header">
+          <div><span class="product-kicker">工程任务工作台</span><h1>Windows STEP → URDF</h1></div>
+          <button id="workflow-help" type="button" aria-expanded="false" aria-label="为什么需要这些步骤？">❓ 帮助</button>
+        </header>
+        <nav id="workflow-map" aria-label="六步任务进度" data-testid="workflow-stepper"></nav>
+        <section id="current-task-card" class="task-card" aria-live="polite" data-testid="current-task-card"></section>
+        <section id="analysis-progress-panel" class="analysis-progress" hidden aria-label="自动分析进度" data-testid="analysis-progress"></section>
+        <section id="notification-center" class="notification-center" aria-label="状态与通知" aria-live="polite" data-testid="notification-center"></section>
+        <section id="step-import-panel" class="workflow-panel" aria-label="STEP 导入">
+          <details class="import-help"><summary>STEP 文件要求</summary><p>选择完整机器人装配体导出的 STEP（优先 AP242）。文件只在本机 UUID 作业目录中处理。</p></details>
+          <label class="file-picker-button" for="step-file">📥 选择 STEP 文件</label>
+          <input id="step-file" class="file-picker-input" type="file" accept=".step,.stp,model/step" />
+          <div class="toolbar">
+            <button id="analyze-step" class="advanced-only" type="button">重新分析所选文件</button>
+            <button id="try-example" type="button" aria-label="先试两关节示例">🧪 示例</button>
+            <button id="start-new-project" type="button" aria-label="开始新工程">✨ 新工程</button>
+            <button id="restore-last-project" type="button" aria-label="恢复上次工程" hidden>♻️ 恢复</button>
+            <button id="export-preview" type="button" disabled>导出预览模型</button>
+            <button id="export-step-job" type="button" disabled data-testid="formal-export">正式导出（尚未满足门禁）</button>
+          </div>
+          <div id="step-job-status" class="job-status">等待导入 STEP 文件。导入前不会加载任何机器人模型。</div>
+        </section>
+
+        <section id="servo-template-stage" class="manual-panel" hidden aria-label="舵机模板确认">
+          <strong>🦾 确认一种，应用全部</strong>
+          <details class="advanced-explanation"><summary>说明</summary><p>软件先找重复零件和输出轴。你只确认一次；不同安装姿态会用各自装配变换自动换算，异常实例仍可单独修改。</p></details>
+          <div id="servo-template-cards"></div>
+        </section>
+
+        <section id="step-inspector" class="manual-panel" hidden>
+          <div class="mode-switch" role="group" aria-label="操作模式">
+            <button id="default-mode" type="button" class="selected" aria-label="默认模式">🙂 默认</button>
+            <button id="advanced-mode" type="button" aria-label="高级模式">⚙️ 高级</button>
+          </div>
+          <strong>🎚️ 检查关节</strong>
+          <details class="advanced-explanation"><summary>说明</summary><p>软件已经生成整机、Link、关节和旋转轴。请逐个拖动关节：正确就确认，不正确才打开修正。</p></details>
+          <p id="step-feature-summary"></p>
+          <div id="review-progress" class="review-progress">正在准备关节检查……</div>
+          <div class="toolbar compact-toolbar">
+            <button id="editor-undo" type="button" aria-label="撤销">↩️ 撤销</button>
+            <button id="editor-redo" type="button" aria-label="重做">↪️ 重做</button>
+            <button id="review-next" type="button">⏭️ 下一个</button>
+            <button id="preview-generic-robot" type="button">🔄 更新预览</button>
+          </div>
+          <h2>🎚️ 当前关节</h2>
+          <div id="generic-joint-editor"></div>
+          <details id="structure-correction-tools" class="correction-section">
+            <summary>🧩 零件分组不对</summary>
+            <p class="why-note">只有零件错误地粘在一起或应该固定的零件被拆开时才需要这里。</p>
+            <div id="step-assembly-list" class="assembly-list"></div>
+            <button id="merge-groups" type="button">合并勾选的固定结构</button>
+            <div id="rigid-group-editor"></div>
+          </details>
+          <details id="axis-correction-tools" class="correction-section">
+            <summary>⭕ 旋转轴不对</summary>
+            <p class="why-note">先点击上面的零件，再在模型或列表中点击真正的舵机输出轴。软件会自动计算轴向量，不需要手算。</p>
+            <div id="step-axis-list" class="axis-list">先在上方选择一个零件实例。</div>
+          </details>
+          <section class="advanced-only advanced-editor">
+            <h2>高级建模设置</h2>
+            <div class="field-grid">
+              <label>新 Joint 名称<input id="new-joint-name" value="joint_1" /></label>
+              <label>Parent<select id="new-joint-parent"></select></label>
+              <label>Child / 运动侧<select id="new-joint-child"></select></label>
+              <label>最小角度°<input id="new-joint-lower" type="number" step="0.1" /></label>
+              <label>最大角度°<input id="new-joint-upper" type="number" step="0.1" /></label>
+            </div>
+            <button id="add-revolute-joint" type="button">用选中轴创建关节</button>
+          </section>
+          <h2>✅ 导出检查</h2>
+          <section id="anomaly-queue" class="anomaly-queue" aria-label="异常检查队列" data-testid="anomaly-queue"></section>
+          <details id="evidence-panel" class="evidence-panel advanced-only">
+            <summary>查看技术证据与数据性质</summary>
+            <div id="evidence-panel-content"></div>
+          </details>
+          <div id="generic-validation" class="job-status"></div>
+          <section id="export-review-panel" class="export-review" hidden aria-label="正式导出前审查" data-testid="export-review"></section>
+          <button id="download-analysis-report" class="advanced-only" type="button">导出分析与验证报告 JSON</button>
+        </section>
+
+        <div id="status">空工作台：请选择完整机器人装配体导出的 STEP 文件。</div>
+        <div id="active-joint">当前关节：未选择</div>
+        <div class="toolbar">
+          <button id="reset-all" type="button">⏺️ 归零</button>
+          <button id="run-sequence" type="button">▶️ 依次测试</button>
+          <button id="toggle-axes" type="button">⭕ 关节轴</button>
+          <button id="toggle-grid" type="button">#️⃣ 网格</button>
+          <button id="toggle-contact-graph" class="advanced-only" type="button">🕸️ 接触图</button>
+        </div>
+        <footer class="workspace-footer">
+          <span id="autosave-status">尚未创建检查点</span>
+          <span>新手与高级模式共享同一个 RobotModel</span>
+        </footer>
+
+      </aside>
+    </main>
+    <script type="module" src="/src/main.js"></script>
+  </body>
+</html>

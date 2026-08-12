@@ -1,0 +1,11 @@
+cff-version: 1.2.0
+message: "If you use this software, please cite the versioned software release."
+title: "Windows STEP-to-URDF"
+type: software
+version: "0.3.0-rc.1"
+date-released: 2026-08-12
+repository-code: "https://github.com/IAMFanxy13/windows-step-to-urdf"
+license: "Apache-2.0"
+authors:
+  - alias: "IAMFanxy13"
+abstract: "Local-first, explainable STEP assembly to URDF conversion for open-chain and tree-shaped robots."
