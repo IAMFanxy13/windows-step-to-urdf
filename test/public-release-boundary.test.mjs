@@ -17,7 +17,7 @@ function sourceFiles(directory) {
 }
 
 function stepFiles(directory) {
-  const ignored = new Set(['.git', '.runtime', '.venv', 'dist', 'node_modules']);
+  const ignored = new Set(['.git', '.runtime', '.venv', 'dist', 'jobs', 'node_modules']);
   return fs.readdirSync(directory, { withFileTypes: true }).flatMap(entry => {
     if (entry.isDirectory() && ignored.has(entry.name)) return [];
     const target = path.join(directory, entry.name);

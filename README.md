@@ -38,7 +38,7 @@ cd windows-step-to-urdf
 
 That launcher is the one command needed after checkout. On first run it creates an isolated Python environment under `%LOCALAPPDATA%\STEPtoURDF`, installs locked web dependencies, starts a local service, and opens the browser. The application binds to `127.0.0.1` only.
 
-Want to explore without CAD data? Click **🧪 Example**. The included two-joint AP242 file is generated specifically for this repository.
+Want to explore without CAD data? Click **🧪 Example**. The included two-joint AP242 assembly uses two instances of an MIT-licensed public SG51R servo body plus repository-generated horns, brackets, and links. Exact provenance is in [Third-party notices](THIRD_PARTY_NOTICES.md).
 
 ## 🧭 Workflow
 

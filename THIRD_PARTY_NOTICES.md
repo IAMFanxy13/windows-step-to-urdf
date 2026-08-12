@@ -56,6 +56,23 @@ test suite, including generated AP242 XCAF hierarchy import, exact B-Rep
 interrogation, meshing and mass properties.
 The converter does not call any VTK API.
 
+## Adafruit SG51R servo CAD
+
+- Repository: https://github.com/adafruit/Adafruit_CAD_Parts
+- Commit: `ab3dfc47c32468ba87e7652556cab25efd906eb0`
+- Source path: `2201 Submicro servo/2201 Submicro Servo SG51R.step`
+- Vendored path: `third_party/adafruit_sg51r/2201_Submicro_Servo_SG51R.step`
+- SHA-256: `66fa3c9570de91e698b0077e20adc652eaf3e21f98db499cfc4980c35e740013`
+- License: MIT
+- Copyright: 2016 Adafruit Industries
+
+The pinned body geometry makes the public two-joint workflow example visually
+recognizable as a servo mechanism. The repository generates the horns,
+brackets, links, occurrence transforms, and AP242 assembly around two instances
+of that definition. The exact upstream license and provenance are preserved in
+`third_party/adafruit_sg51r/`; the example is not a production dimensional
+compatibility claim.
+
 ## Other npm dependencies
 
 The exact graph is recorded in `package-lock.json`. Direct dependencies
