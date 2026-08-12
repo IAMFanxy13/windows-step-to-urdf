@@ -7,10 +7,6 @@ import json
 import traceback
 from pathlib import Path
 
-from occt_step import StepImportError, import_step
-from candidate_engine import write_candidates
-
-
 def write_status(job: Path, value: dict) -> None:
     target = job / "status.json"
     temporary = target.with_suffix(".json.tmp")
@@ -34,6 +30,10 @@ def run(job: Path) -> None:
             "state": "analyzing", "kind": "step-import", "phase": phase,
             "message": messages.get(phase, "正在用 OCCT/XCAF 解析 STEP"),
         })
+
+    report("load_runtime")
+    from occt_step import import_step
+    from candidate_engine import write_candidates
 
     report("read_step")
     assembly = import_step(source, output, progress=report)
@@ -60,12 +60,13 @@ def main(argv=None) -> int:
     try:
         run(job)
         return 0
-    except (StepImportError, OSError, ValueError) as error:
+    except (OSError, ValueError) as error:
         write_status(job, {"state": "failed", "kind": "step-import", "message": str(error)})
         return 2
     except Exception as error:  # Keep a local traceback, but do not expose it through the API.
         (job / "worker-error.log").write_text(traceback.format_exc(), "utf-8")
-        write_status(job, {"state": "failed", "kind": "step-import", "message": f"Unexpected STEP importer error: {type(error).__name__}"})
+        message = str(error) if type(error).__name__ == "StepImportError" else f"Unexpected STEP importer error: {type(error).__name__}"
+        write_status(job, {"state": "failed", "kind": "step-import", "message": message})
         return 3
 
 

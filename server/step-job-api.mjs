@@ -31,6 +31,10 @@ function decodeFilename(value) {
 
 export function startStepWorker({ projectRoot, store, id, pythonExecutable = process.env.STEP_URDF_PYTHON || 'python' }) {
   const worker = path.join(projectRoot, 'scripts', 'step_import_worker.py');
+  store.writeStatus(id, {
+    ...store.readStatus(id), state: 'starting', phase: 'spawn_worker',
+    message: '正在启动本机 STEP/OCCT 分析进程',
+  });
   const child = spawn(pythonExecutable, [worker, '--job-dir', store.jobDirectory(id)], {
     cwd: projectRoot, windowsHide: true, shell: false, stdio: ['ignore', 'ignore', 'pipe'],
   });
