@@ -312,27 +312,37 @@ def _build_exact_contact_graph(part_records: list[dict], tolerance: float = 0.00
             bbox_distance, overlaps, area_estimate, containment = _bounds_metrics(left["bounds"], right["bounds"])
             if bbox_distance > tolerance:
                 continue
+            face_pair_candidates = len(left.get("faces", [])) * len(right.get("faces", []))
+            should_analyze_exact_distance = face_pair_candidates <= MAX_EXACT_FACE_PAIR_CANDIDATES
             exact_distance = None
             closest_point_midpoint = None
             evidence = [f"AABB gap {bbox_distance:.9g} m"]
-            try:
-                distance = BRepExtrema_DistShapeShape(left["shape"], right["shape"])
-                distance.Perform()
-                if distance.IsDone():
-                    exact_distance = distance.Value()
-                    evidence.append(f"OCCT exact B-Rep minimum distance {exact_distance:.9g} m")
-                    if distance.NbSolution() > 0:
-                        point_a, point_b = distance.PointOnShape1(1), distance.PointOnShape2(1)
-                        closest_point_midpoint = [
-                            (point_a.X() + point_b.X()) / 2,
-                            (point_a.Y() + point_b.Y()) / 2,
-                            (point_a.Z() + point_b.Z()) / 2,
-                        ]
-            except Exception as error:  # keep the coarse edge and make uncertainty explicit
-                evidence.append(f"exact B-Rep distance unavailable: {type(error).__name__}")
+            if should_analyze_exact_distance:
+                exact_distance_status = "COMPLETED"
+                try:
+                    distance = BRepExtrema_DistShapeShape(left["shape"], right["shape"])
+                    distance.Perform()
+                    if distance.IsDone():
+                        exact_distance = distance.Value()
+                        evidence.append(f"OCCT exact B-Rep minimum distance {exact_distance:.9g} m")
+                        if distance.NbSolution() > 0:
+                            point_a, point_b = distance.PointOnShape1(1), distance.PointOnShape2(1)
+                            closest_point_midpoint = [
+                                (point_a.X() + point_b.X()) / 2,
+                                (point_a.Y() + point_b.Y()) / 2,
+                                (point_a.Z() + point_b.Z()) / 2,
+                            ]
+                except Exception as error:  # keep the coarse edge and make uncertainty explicit
+                    exact_distance_status = "UNAVAILABLE"
+                    evidence.append(f"exact B-Rep distance unavailable: {type(error).__name__}")
+            else:
+                exact_distance_status = "SKIPPED_COMPLEXITY_LIMIT"
+                evidence.append(
+                    f"exact whole-shape distance skipped: {face_pair_candidates} candidates exceed "
+                    f"the {MAX_EXACT_FACE_PAIR_CANDIDATES} safety limit"
+                )
             fastener = _looks_like_fastener_name(left["name"]) or _looks_like_fastener_name(right["name"])
             effective = exact_distance if exact_distance is not None else bbox_distance
-            face_pair_candidates = len(left.get("faces", [])) * len(right.get("faces", []))
             should_analyze_faces = effective <= 0.00005 and face_pair_candidates <= MAX_EXACT_FACE_PAIR_CANDIDATES
             if effective > 0.00005:
                 face_analysis_status = "NOT_REQUIRED_CLEARANCE"
@@ -354,6 +364,7 @@ def _build_exact_contact_graph(part_records: list[dict], tolerance: float = 0.00
                 "boundingBoxDistanceMeters": bbox_distance, "exactMinimumDistanceMeters": exact_distance,
                 "closestPointMidpointMeters": closest_point_midpoint,
                 "facePairCandidateCount": face_pair_candidates,
+                "exactDistanceAnalysisStatus": exact_distance_status,
                 "faceInterfaceAnalysisStatus": face_analysis_status,
                 **interface, "aabbOverlapAreaEstimateSquareMeters": area_estimate,
                 "containment": containment,

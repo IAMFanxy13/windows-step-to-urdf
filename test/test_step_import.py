@@ -154,6 +154,10 @@ class StepImportTests(unittest.TestCase):
                 edge.get("faceInterfaceAnalysisStatus") == "SKIPPED_COMPLEXITY_LIMIT"
                 for edge in servo_contact_edges
             ))
+            self.assertTrue(any(
+                edge.get("exactDistanceAnalysisStatus") == "SKIPPED_COMPLEXITY_LIMIT"
+                for edge in servo_contact_edges
+            ))
 
             servo_family = next(
                 item for item in candidates["servoTemplateCandidates"]
@@ -182,8 +186,8 @@ class StepImportTests(unittest.TestCase):
             self.assertEqual(len(candidates["rigidGroupCandidates"]), 2)
             self.assertTrue(all(item["topologyAlternatives"] for item in candidates["jointCandidates"]))
             self.assertTrue(all(
-                item["outputPortContactClassification"]["method"]
-                in {"EXACT_BREP_CONTACT_CENTER", "EXACT_BREP_INTERFACE_POINT"}
+                item["outputPortContactClassification"]["method"] == "PROXIMITY_FALLBACK_REQUIRES_REVIEW"
+                and item["outputPortContactClassification"]["confidence"] == "LOW"
                 for item in candidates["jointCandidates"]
             ))
 
