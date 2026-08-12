@@ -300,6 +300,9 @@ def _summarize_interface(pairs: list[dict], effective_distance: float, tolerance
     }
 
 
+MAX_EXACT_FACE_PAIR_CANDIDATES = 2048
+
+
 def _build_exact_contact_graph(part_records: list[dict], tolerance: float = 0.003) -> dict:
     nodes = [{"occurrenceId": item["id"], "definitionId": item["definitionId"], "centerMeters": [
         (item["bounds"]["min"][i] + item["bounds"]["max"][i]) / 2 for i in range(3)]} for item in part_records]
@@ -329,8 +332,20 @@ def _build_exact_contact_graph(part_records: list[dict], tolerance: float = 0.00
                 evidence.append(f"exact B-Rep distance unavailable: {type(error).__name__}")
             fastener = _looks_like_fastener_name(left["name"]) or _looks_like_fastener_name(right["name"])
             effective = exact_distance if exact_distance is not None else bbox_distance
+            face_pair_candidates = len(left.get("faces", [])) * len(right.get("faces", []))
+            should_analyze_faces = effective <= 0.00005 and face_pair_candidates <= MAX_EXACT_FACE_PAIR_CANDIDATES
+            if effective > 0.00005:
+                face_analysis_status = "NOT_REQUIRED_CLEARANCE"
+            elif should_analyze_faces:
+                face_analysis_status = "COMPLETED"
+            else:
+                face_analysis_status = "SKIPPED_COMPLEXITY_LIMIT"
+                evidence.append(
+                    f"exact face-interface analysis skipped: {face_pair_candidates} candidates exceed "
+                    f"the {MAX_EXACT_FACE_PAIR_CANDIDATES} safety limit"
+                )
             interface = _summarize_interface(
-                _face_interface_pairs(left, right, 0.00005) if effective <= 0.00005 else [],
+                _face_interface_pairs(left, right, 0.00005) if should_analyze_faces else [],
                 effective,
                 0.00005,
             )
@@ -338,6 +353,8 @@ def _build_exact_contact_graph(part_records: list[dict], tolerance: float = 0.00
                 "id": f"contact-{len(edges) + 1}", "a": left["id"], "b": right["id"],
                 "boundingBoxDistanceMeters": bbox_distance, "exactMinimumDistanceMeters": exact_distance,
                 "closestPointMidpointMeters": closest_point_midpoint,
+                "facePairCandidateCount": face_pair_candidates,
+                "faceInterfaceAnalysisStatus": face_analysis_status,
                 **interface, "aabbOverlapAreaEstimateSquareMeters": area_estimate,
                 "containment": containment,
                 "outputPortProximityMeters": None, "fastenerSuppressed": fastener,

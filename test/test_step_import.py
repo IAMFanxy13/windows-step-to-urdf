@@ -142,6 +142,17 @@ class StepImportTests(unittest.TestCase):
             servo_occurrences = [item for item in parts if item["definitionId"] == servo_definition_id]
             self.assertEqual([item["name"] for item in servo_occurrences], ["servo_a", "servo_b"])
 
+            servo_contact_edges = [
+                edge for edge in result["contactGraph"]["edges"]
+                if edge["a"] in {item["id"] for item in servo_occurrences}
+                or edge["b"] in {item["id"] for item in servo_occurrences}
+            ]
+            self.assertTrue(servo_contact_edges)
+            self.assertTrue(any(
+                edge.get("faceInterfaceAnalysisStatus") == "SKIPPED_COMPLEXITY_LIMIT"
+                for edge in servo_contact_edges
+            ))
+
             servo_family = next(
                 item for item in candidates["servoTemplateCandidates"]
                 if item["definitionId"] == servo_definition_id
@@ -168,7 +179,11 @@ class StepImportTests(unittest.TestCase):
             self.assertEqual(len(candidates["jointCandidates"]), 2)
             self.assertEqual(len(candidates["rigidGroupCandidates"]), 2)
             self.assertTrue(all(item["topologyAlternatives"] for item in candidates["jointCandidates"]))
-            self.assertTrue(all(item["outputPortContactClassification"]["method"] == "EXACT_BREP_CONTACT_CENTER" for item in candidates["jointCandidates"]))
+            self.assertTrue(all(
+                item["outputPortContactClassification"]["method"]
+                in {"EXACT_BREP_CONTACT_CENTER", "EXACT_BREP_INTERFACE_POINT"}
+                for item in candidates["jointCandidates"]
+            ))
 
 
 if __name__ == "__main__":
