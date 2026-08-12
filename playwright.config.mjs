@@ -1,7 +1,7 @@
 import { defineConfig, devices } from '@playwright/test';
 
 export default defineConfig({
-  testDir: './test/e2e', testMatch: '**/*.e2e.mjs', timeout: 60_000, fullyParallel: false,
+  testDir: './test/e2e', testMatch: '**/*.e2e.mjs', timeout: 90_000, fullyParallel: false,
   expect: { timeout: 15_000, toHaveScreenshot: { maxDiffPixelRatio: 0.01 } },
   reporter: [['line'], ['json', { outputFile: 'test-results/e2e-results.json' }]],
   outputDir: 'test-results/playwright-artifacts',

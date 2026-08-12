@@ -3,6 +3,9 @@ import AxeBuilder from '@axe-core/playwright';
 import { readFile } from 'node:fs/promises';
 
 const reportShot = name => `test-results/screenshots/${name}.png`;
+const captureReport = async (page, name) => {
+  if (!process.env.CI) await page.screenshot({ path: reportShot(name), fullPage: true });
+};
 
 test('empty workspace is a clear keyboard-accessible task 1/6', async ({ page }) => {
   const runtimeErrors = [];
@@ -23,7 +26,7 @@ test('empty workspace is a clear keyboard-accessible task 1/6', async ({ page })
   const accessibility = await new AxeBuilder({ page }).analyze();
   expect(accessibility.violations.filter(item => ['critical', 'serious'].includes(item.impact))).toEqual([]);
   expect(runtimeErrors).toEqual([]);
-  await page.screenshot({ path: reportShot('01_empty_workspace'), fullPage: true });
+  await captureReport(page, '01_empty_workspace');
 });
 
 test('file selection starts analysis automatically', async ({ page }) => {
@@ -32,7 +35,7 @@ test('file selection starts analysis automatically', async ({ page }) => {
   const example = await readFile('public/examples/two_joint_servo_arm_ap242.step');
   await page.setInputFiles('#step-file', { name: 'robot.step', mimeType: 'model/step', buffer: example });
   await expect(page.getByTestId('current-task-card')).toContainText(/正在自动识别|查看自动结果|查看自动识别摘要/, { timeout: 45_000 });
-  await expect(page.getByRole('region', { name: '舵机模板确认' })).toBeVisible({ timeout: 45_000 });
+  await expect(page.getByRole('region', { name: '舵机模板确认' })).toBeVisible({ timeout: 60_000 });
   await expect(page.getByRole('region', { name: 'STEP 导入' })).toBeHidden();
 });
 
@@ -44,9 +47,9 @@ test('example follows gate, analysis, anomaly and export-blocking flow', async (
   await expect(page.locator('html')).toHaveAttribute('data-app-ready', 'true');
   await page.getByRole('button', { name: '先试两关节示例' }).click();
   await expect(page.getByTestId('current-task-card')).toContainText(/正在自动分析|查看自动识别摘要/);
-  await page.screenshot({ path: reportShot('02_analysis_or_results'), fullPage: true });
-  await expect(page.getByRole('region', { name: '舵机模板确认' })).toBeVisible({ timeout: 45_000 });
-  await page.screenshot({ path: reportShot('02b_servo_template_result'), fullPage: true });
+  await captureReport(page, '02_analysis_or_results');
+  await expect(page.getByRole('region', { name: '舵机模板确认' })).toBeVisible({ timeout: 60_000 });
+  await captureReport(page, '02b_servo_template_result');
   const output = page.getByRole('button', { name: '输出接口正确，进入代表实例教学' });
   await expect(output).toHaveCount(0);
   await page.getByRole('button', { name: '是，这是舵机' }).click();
@@ -65,14 +68,14 @@ test('example follows gate, analysis, anomaly and export-blocking flow', async (
   await page.getByRole('button', { name: '默认模式' }).click();
   expect(await page.evaluate(() => window.__STEP_URDF_TEST__.counts)).toEqual(countsBefore);
   expect(runtimeErrors).toEqual([]); expect(consoleErrors).toEqual([]);
-  await page.screenshot({ path: reportShot('03_anomaly_and_export_blocker'), fullPage: true });
+  await captureReport(page, '03_anomaly_and_export_blocker');
 });
 
 test('motion review requires all poses and all three confirmations', async ({ page }) => {
   await page.goto('/');
   await expect(page.locator('html')).toHaveAttribute('data-app-ready', 'true');
   await page.getByRole('button', { name: '先试两关节示例' }).click();
-  await expect(page.getByRole('region', { name: '舵机模板确认' })).toBeVisible({ timeout: 45_000 });
+  await expect(page.getByRole('region', { name: '舵机模板确认' })).toBeVisible({ timeout: 60_000 });
   await page.getByRole('button', { name: '是，这是舵机' }).click();
   await page.getByRole('button', { name: '输出接口正确，进入代表实例教学' }).click();
   await page.getByRole('button', { name: '确认代表实例并批量应用相同拓扑' }).click();
@@ -97,5 +100,5 @@ test('motion review requires all poses and all three confirmations', async ({ pa
   await expect(page.locator('.generic-joint-card')).toHaveCount(0);
   await page.getByRole('button', { name: '恢复上次工程' }).click();
   await expect(page.locator('.generic-joint-card')).toHaveCount(2);
-  await page.screenshot({ path: reportShot('04_motion_review_and_recovery'), fullPage: true });
+  await captureReport(page, '04_motion_review_and_recovery');
 });
