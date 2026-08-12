@@ -82,6 +82,43 @@ def _geometry_fingerprint(definition, faces):
     return "sha256:" + hashlib.sha256(canonical.encode("utf-8")).hexdigest()
 
 
+def _axis_cluster_score(cluster, circular_edges, bounds):
+    """Rank likely functional shafts above repeated mounting-hole cylinders."""
+    representative = min(cluster, key=lambda face: face["cylinder"]["radiusMeters"])
+    axis = _normalize(representative["cylinder"]["axis"])
+    origin = representative["cylinder"]["originMeters"]
+    radii = {round(face["cylinder"]["radiusMeters"], 9) for face in cluster}
+    compatible_circle_positions = []
+    for edge in circular_edges:
+        circle = edge["circle"]
+        direction = _normalize(circle["axis"])
+        if abs(sum(direction[index] * axis[index] for index in range(3))) < 0.995:
+            continue
+        delta = [circle["originMeters"][index] - origin[index] for index in range(3)]
+        projection = sum(delta[index] * axis[index] for index in range(3))
+        radial = math.sqrt(sum((delta[index] - projection * axis[index]) ** 2 for index in range(3)))
+        if radial <= max(0.0001, representative["cylinder"]["radiusMeters"] * 0.15):
+            compatible_circle_positions.append(sum(circle["originMeters"][index] * axis[index] for index in range(3)))
+
+    projected_bounds = [
+        sum(point[index] * axis[index] for index in range(3))
+        for point in (
+            [x, y, z]
+            for x in (bounds["min"][0], bounds["max"][0])
+            for y in (bounds["min"][1], bounds["max"][1])
+            for z in (bounds["min"][2], bounds["max"][2])
+        )
+    ]
+    terminal_gap = min(
+        (min(abs(position - min(projected_bounds)), abs(position - max(projected_bounds))) for position in compatible_circle_positions),
+        default=1.0,
+    )
+    multi_diameter_score = 3.0 * max(0, len(radii) - 1)
+    terminal_score = 1.25 if terminal_gap <= 0.0002 else 0.0
+    radius_score = min(0.75, max(radii, default=0.0) / 0.004)
+    return len(cluster) + multi_diameter_score + terminal_score + radius_score
+
+
 def generate_candidates(assembly: dict, features: dict) -> dict:
     occurrences = [item for item in assembly.get("occurrences", []) if item.get("kind") == "part"]
     definition_counts = Counter(item.get("definitionId") for item in occurrences)
@@ -105,15 +142,23 @@ def generate_candidates(assembly: dict, features: dict) -> dict:
         clusters = defaultdict(list)
         for face in cylinders:
             clusters[_line_key(face["cylinder"])].append(face)
-        ranked = sorted(clusters.values(), key=lambda cluster: (-len(cluster), min(face["cylinder"]["radiusMeters"] for face in cluster)))
+        definition = definitions.get(definition_id, {})
+        bounds = definition.get("boundsMeters") or {"min": [0, 0, 0], "max": [0, 0, 0]}
+        circular_edges = circles_by_definition.get(definition_id, [])
+        ranked = sorted(
+            clusters.values(),
+            key=lambda cluster: (
+                -_axis_cluster_score(cluster, circular_edges, bounds),
+                -len(cluster),
+                min(face["cylinder"]["radiusMeters"] for face in cluster),
+            ),
+        )
         primary = ranked[0]
         representative = min(primary, key=lambda face: face["cylinder"]["radiusMeters"])
         definition_faces = [face for face in features.get("faces", []) if face["id"].startswith(f"{definition_id}/face/")]
-        definition = definitions.get(definition_id, {})
         instance_ids = [item["id"] for item in occurrences if item.get("definitionId") == definition_id]
         display_name = str(definition.get("name") or definition_id)
         semantic_match = any(token in display_name.lower() for token in ("servo", "motor", "actuator", "dynamixel", "lx-")) or "舵机" in display_name
-        bounds = definition.get("boundsMeters") or {"min": [0, 0, 0], "max": [0, 0, 0]}
         dimensions = [bounds["max"][i] - bounds["min"][i] for i in range(3)]
         compact_size = all(0.005 <= value <= 0.15 for value in dimensions)
         lower_name = display_name.lower()
@@ -141,7 +186,12 @@ def generate_candidates(assembly: dict, features: dict) -> dict:
                 "directionLocal": _normalize(face["cylinder"]["axis"]),
                 "radiusMeters": face["cylinder"]["radiusMeters"],
                 "coaxialFaceCount": len(cluster),
-                "evidence": ["exact analytic cylindrical B-Rep face", f"{len(cluster)} coaxial cylindrical faces share this line"],
+                "functionalInterfaceScore": _axis_cluster_score(cluster, circular_edges, bounds),
+                "evidence": [
+                    "exact analytic cylindrical B-Rep face",
+                    f"{len(cluster)} coaxial cylindrical faces share this line",
+                    "multi-diameter and exposed-end evidence ranks functional shafts above repeated mounting holes",
+                ],
             })
         representative_axis = _normalize(representative["cylinder"]["axis"])
         representative_origin = representative["cylinder"]["originMeters"]

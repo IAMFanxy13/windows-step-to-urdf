@@ -198,6 +198,9 @@ describe('RobotEditor', () => {
     expect(model.joints[0]).toMatchObject({
       verificationStatus: 'TEMPLATE_VERIFIED', reviewRequired: false,
       confirmation: { axis: true, topology: true, movingSide: true, limits: false },
+      motionVerification: {
+        posesTestedDegrees: [], movingPartsCorrect: false, pivotCorrect: false, directionCorrect: false,
+      },
     });
   });
 

@@ -913,7 +913,9 @@ function renderRigidGroups() {
 
 function renderGenericJoints() {
   genericJointEditorElement.replaceChildren();
-  const activeJointId = stepEditor.model.joints.find(item => item.reviewRequired === true || !item.confirmation?.axis || !item.confirmation?.topology || !item.confirmation?.movingSide)?.id
+  const motionReviewComplete = joint => [0, 5, -5].every(value => joint.motionVerification?.posesTestedDegrees?.includes(value))
+    && ['movingPartsCorrect', 'pivotCorrect', 'directionCorrect'].every(key => joint.motionVerification?.[key] === true);
+  const activeJointId = stepEditor.model.joints.find(item => item.reviewRequired === true || !item.confirmation?.axis || !item.confirmation?.topology || !item.confirmation?.movingSide || !motionReviewComplete(item))?.id
     || stepEditor.model.joints[0]?.id;
   for (const [jointIndex, joint] of stepEditor.model.joints.entries()) {
     const card = document.createElement('div');
@@ -925,7 +927,7 @@ function renderGenericJoints() {
     const lower = Number.isFinite(joint.limits?.lowerRadians) ? (joint.limits.lowerRadians * RAD2DEG).toFixed(2) : '未填';
     const upper = Number.isFinite(joint.limits?.upperRadians) ? (joint.limits.upperRadians * RAD2DEG).toFixed(2) : '未填';
     const evidenceText = Array.isArray(joint.evidence) ? joint.evidence.join('；') : Object.entries(joint.evidence || {}).map(([key, value]) => `${key}: ${value}`).join('；');
-    const reviewed = joint.reviewRequired !== true && joint.confirmation?.axis && joint.confirmation?.topology && joint.confirmation?.movingSide;
+    const reviewed = joint.reviewRequired !== true && joint.confirmation?.axis && joint.confirmation?.topology && joint.confirmation?.movingSide && motionReviewComplete(joint);
     const actuationMode = joint.actuationMode || 'direct';
     card.innerHTML = `
       <div class="joint-review-heading">

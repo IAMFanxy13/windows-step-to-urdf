@@ -224,8 +224,8 @@ export function createRobotModelFromAnalysis(assembly, candidates = {}, jobId) {
       limits: { lowerRadians: null, upperRadians: null, source: 'unset' },
       confirmation: { axis: templateVerified, topology: templateVerified, movingSide: templateVerified, limits: false },
       motionVerification: {
-        posesTestedDegrees: templateVerified ? [0, 5, -5] : [],
-        movingPartsCorrect: templateVerified, pivotCorrect: templateVerified, directionCorrect: templateVerified,
+        posesTestedDegrees: [],
+        movingPartsCorrect: false, pivotCorrect: false, directionCorrect: false,
       },
     });
   }

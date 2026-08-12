@@ -133,6 +133,38 @@ class StepImportTests(unittest.TestCase):
             candidates = generate_candidates(result, features)
             parts = [item for item in result["occurrences"] if item["kind"] == "part"]
             self.assertEqual(len(parts), 5)
+            definitions = {item["name"]: item for item in result["definitions"]}
+            self.assertEqual(
+                set(definitions),
+                {"base_structure", "SG51R_servo_body", "upper_arm_structure", "forearm_structure"},
+            )
+            servo_definition_id = definitions["SG51R_servo_body"]["id"]
+            servo_occurrences = [item for item in parts if item["definitionId"] == servo_definition_id]
+            self.assertEqual([item["name"] for item in servo_occurrences], ["servo_a", "servo_b"])
+
+            servo_family = next(
+                item for item in candidates["servoTemplateCandidates"]
+                if item["definitionId"] == servo_definition_id
+            )
+            self.assertEqual(servo_family["instanceCount"], 2)
+            self.assertEqual(servo_family["outputAxisLocal"]["direction"], [0.0, 0.0, 1.0])
+            for actual, expected in zip(servo_family["outputAxisLocal"]["origin"], [0.0, 0.0, 0.0]):
+                self.assertAlmostEqual(actual, expected, places=8)
+            self.assertAlmostEqual(servo_family["outputPort"]["interfaceCenter"][2], 0.0026, places=8)
+
+            for structure_name in ("upper_arm_structure", "forearm_structure"):
+                definition_id = definitions[structure_name]["id"]
+                horn_faces = [
+                    face for face in features["faces"]
+                    if face["id"].startswith(f"{definition_id}/face/")
+                    and abs(face.get("cylinder", {}).get("radiusMeters", 0.0) - 0.008) < 1e-8
+                ]
+                self.assertTrue(horn_faces, f"{structure_name} is missing its generated output horn")
+                horn = horn_faces[0]["cylinder"]
+                self.assertAlmostEqual(horn["originMeters"][0], 0.0, places=8)
+                self.assertAlmostEqual(horn["originMeters"][1], 0.0, places=8)
+                self.assertEqual([round(value, 8) for value in horn["axis"]], [0.0, 0.0, 1.0])
+
             self.assertEqual(len(candidates["jointCandidates"]), 2)
             self.assertEqual(len(candidates["rigidGroupCandidates"]), 2)
             self.assertTrue(all(item["topologyAlternatives"] for item in candidates["jointCandidates"]))
