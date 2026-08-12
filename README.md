@@ -8,7 +8,7 @@
 
 🇨🇳 [简体中文](README_zh-CN.md)
 
-![Empty workspace: no bundled robot is loaded before the user imports STEP](docs/images/empty-workspace.png)
+![Windows STEP-to-URDF workbench showing the generated two-joint example](docs/images/interface-preview.png)
 
 > [!IMPORTANT]
 > This is a research-grade release candidate, not a one-click oracle. STEP usually preserves geometry and assembly instances but not the original CAD mate intent. Uncertain axes, motion sides, topology, mass data, and limits remain visible and reviewable instead of being silently accepted.

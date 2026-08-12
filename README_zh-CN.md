@@ -8,7 +8,7 @@
 
 🌍 [English](README.md)
 
-![空工作台：导入 STEP 之前不会自动加载任何机器人](docs/images/empty-workspace.png)
+![Windows STEP-to-URDF 工作台正在显示仓库生成的两关节示例](docs/images/interface-preview.png)
 
 > [!IMPORTANT]
 > 当前版本是研究型候选版本，不是假装永远正确的“一键转换器”。STEP 通常保留几何和装配实例，却不一定保留原 CAD 的配合意图。不确定的轴心、运动侧、拓扑、质量和限位会明确进入复核，而不是静默猜测。
