@@ -498,8 +498,9 @@ def _write_meter_stl(shape, target: Path, definition_id: str, linear_deflection:
     return ranges
 
 
-def import_step(source: Path, output: Path) -> dict:
+def import_step(source: Path, output: Path, progress=None) -> dict:
     source, output = source.resolve(), output.resolve()
+    report = progress or (lambda _phase: None)
     if source.suffix.casefold() not in {".step", ".stp"} or not source.is_file():
         raise StepImportError("Input must be an existing .step or .stp file")
     output.mkdir(parents=True, exist_ok=True)
@@ -511,10 +512,12 @@ def import_step(source: Path, output: Path) -> dict:
     for setter in (reader.SetNameMode, reader.SetColorMode, reader.SetLayerMode,
                    reader.SetPropsMode, reader.SetMatMode, reader.SetGDTMode):
         setter(True)
+    report("read_step")
     status = reader.ReadFile(str(source))
     if status != IFSelect_ReturnStatus.IFSelect_RetDone:
         raise StepImportError(f"OCCT could not read STEP file: {status}")
     reader.Reader().SetSystemLengthUnit(1000.0)
+    report("transfer_xcaf")
     if not reader.Transfer(document):
         raise StepImportError("OCCT read the file but could not transfer it to XCAF")
 
@@ -598,12 +601,15 @@ def import_step(source: Path, output: Path) -> dict:
 
     free_shapes = TDF_LabelSequence()
     shape_tool.GetFreeShapes(free_shapes)
+    report("build_definitions")
     for index in range(1, free_shapes.Length() + 1):
         walk(free_shapes.Value(index), None, IDENTITY, [index])
     if not occurrences:
         raise StepImportError("STEP contains no transferable shapes")
+    report("contact_graph")
     contact_graph = _build_exact_contact_graph(part_records)
 
+    report("write_artifacts")
     schema = {
         "schema": "step-servo-urdf/assembly/v1",
         "source": {

@@ -70,7 +70,9 @@ class StepImportTests(unittest.TestCase):
         with tempfile.TemporaryDirectory(prefix="step-urdf-") as directory:
             root = Path(directory)
             source = write_two_part_assembly(root / "assembly.step")
-            result = import_step(source, root / "out")
+            phases = []
+            result = import_step(source, root / "out", progress=lambda phase: phases.append(phase))
+            self.assertEqual(phases, ["read_step", "transfer_xcaf", "build_definitions", "contact_graph", "write_artifacts"])
             self.assertTrue(any("AP242" in schema for schema in result["source"]["stepSchemas"]))
             parts = [item for item in result["occurrences"] if item["kind"] == "part"]
             self.assertEqual(len(result["definitions"]), 2)

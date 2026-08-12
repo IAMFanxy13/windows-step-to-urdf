@@ -21,8 +21,26 @@ def write_status(job: Path, value: dict) -> None:
 def run(job: Path) -> None:
     source = job / "source.step"
     output = job / "analysis"
-    write_status(job, {"state": "analyzing", "kind": "step-import", "message": "正在用 OCCT/XCAF 解析 STEP"})
-    assembly = import_step(source, output)
+    messages = {
+        "read_step": "正在读取 STEP/AP242 文件",
+        "transfer_xcaf": "正在恢复 XCAF 装配定义与实例",
+        "build_definitions": "正在生成精确零件特征与预览网格",
+        "contact_graph": "正在建立零件接触图",
+        "write_artifacts": "正在保存分析结果",
+    }
+
+    def report(phase: str) -> None:
+        write_status(job, {
+            "state": "analyzing", "kind": "step-import", "phase": phase,
+            "message": messages.get(phase, "正在用 OCCT/XCAF 解析 STEP"),
+        })
+
+    report("read_step")
+    assembly = import_step(source, output, progress=report)
+    write_status(job, {
+        "state": "analyzing", "kind": "step-import", "phase": "candidate_generation",
+        "message": "正在生成舵机、刚性组和关节候选",
+    })
     candidates = write_candidates(output / "assembly.json", output / "brep_features.json", output / "joint_candidates.json")
     write_status(job, {
         "state": "ready", "kind": "step-import", "message": "STEP 精确 B-Rep 解析完成",

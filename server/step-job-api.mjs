@@ -3,6 +3,7 @@ import path from 'node:path';
 import { spawn } from 'node:child_process';
 
 import { JobStore } from './job-store.mjs';
+import { defaultJobsRoot } from './job-paths.mjs';
 
 function sendJson(response, status, value) {
   response.statusCode = status;
@@ -44,7 +45,7 @@ export function startStepWorker({ projectRoot, store, id, pythonExecutable = pro
 }
 
 export function createStepJobMiddleware(projectRoot, options = {}) {
-  const jobsRoot = options.jobsRoot || path.join(projectRoot, 'jobs');
+  const jobsRoot = options.jobsRoot || defaultJobsRoot(projectRoot);
   const store = new JobStore(jobsRoot, options);
   const workerStarter = options.workerStarter || startStepWorker;
   return async function stepJobMiddleware(request, response, next) {
