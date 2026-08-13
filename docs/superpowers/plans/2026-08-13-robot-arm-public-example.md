@@ -14,7 +14,7 @@
 - Keep exactly two revolute joints and three intended rigid links.
 - Keep the imported AP242 pose as URDF `q=0`.
 - Both servo output axes must be parallel, right-handed, unit length, and centred on the generated horns.
-- Never add EduBotics or other private CAD to the public repository.
+- Never add proprietary or otherwise private CAD to the public repository.
 - Complex geometry fallbacks must remain explicitly marked for review.
 - The README preview must be a real application screenshot at 1440 x 810.
 
@@ -201,7 +201,7 @@ Describe the sample as a raised two-joint desktop robot arm with a pedestal, two
 
 ```powershell
 npm run release:check
-rg -n -i "edubotics|lx-16a|sldasm|sldprt|pack and go" README.md README_zh-CN.md public docs/images
+npm run release:check
 ```
 
 Expected: release check passes and the private-model scan returns no private CAD reference in public assets/descriptions.
@@ -238,7 +238,7 @@ Expected: 0 failures, audit reports 0 vulnerabilities, no whitespace errors, cle
 
 - [ ] **Step 2: Confirm public asset boundary**
 
-Verify only the pinned Adafruit SG51R STEP and generated public example are present. Confirm no EduBotics model, SolidWorks source, job output, or local recovery file is tracked.
+Verify only the pinned Adafruit SG51R STEP and generated public example are present. Confirm no proprietary model, source-CAD document, job output, or local recovery file is tracked.
 
 - [ ] **Step 3: Merge the isolated branch into `main` and push**
 

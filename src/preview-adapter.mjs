@@ -1,5 +1,13 @@
 export const PREVIEW_COLORS = Object.freeze({ parent: 0x58a6ff, child: 0xffc107, descendant: 0xff8f70, axis: 0x00e676, ghost: 0x9aa4b2, collision: 0xf85149 });
 
+export function stepDisplayFrameSpec() {
+  return {
+    rotationRadians: [-Math.PI / 2, 0, 0],
+    sourceUpAxis: 'Z',
+    displayUpAxis: 'Y',
+  };
+}
+
 export function applyReviewSceneSpec(robot, spec) {
   if (!robot || !spec) return { applied: false, reason: 'preview unavailable' };
   const highlights = { parent: spec.parentLinkId, child: spec.childLinkId, descendants: [...spec.descendantLinkIds] };

@@ -15,7 +15,7 @@ import {
 import { localPortToWorld, teachTopologyPattern } from './servo-functional-template.mjs';
 import { topologyPatternFromRepresentative } from './contact-graph.mjs';
 import { runKinematicInference } from './kinematic-inference-controller.mjs';
-import { contactGraphLineSpecs, occurrenceRenderSpec } from './preview-adapter.mjs';
+import { contactGraphLineSpecs, occurrenceRenderSpec, stepDisplayFrameSpec } from './preview-adapter.mjs';
 import { validateRobotModel, validateRobotModelDetailed } from './robot-model.mjs';
 import { WorkflowController } from './app/workflow-controller.mjs';
 import { createNotificationService } from './app/notification-service.mjs';
@@ -95,6 +95,12 @@ scene.add(fillLight);
 
 const grid = new THREE.GridHelper(1.2, 24, 0x4d6078, 0x2c3746);
 scene.add(grid);
+
+const modelDisplayFrame = new THREE.Group();
+const displayFrameSpec = stepDisplayFrameSpec();
+modelDisplayFrame.rotation.set(...displayFrameSpec.rotationRadians);
+modelDisplayFrame.name = `${displayFrameSpec.sourceUpAxis}-up-to-${displayFrameSpec.displayUpAxis}-up`;
+scene.add(modelDisplayFrame);
 
 let axesVisible = true;
 let sequenceRunning = false;
@@ -428,7 +434,7 @@ document.getElementById('toggle-contact-graph').addEventListener('click', () => 
 });
 
 function rebuildContactGraphHelpers() {
-  for (const helper of contactGraphHelpers.splice(0)) scene.remove(helper);
+  for (const helper of contactGraphHelpers.splice(0)) helper.removeFromParent();
   if (!stepAssembly) return;
   for (const spec of contactGraphLineSpecs(stepAssembly)) {
     const geometry = new THREE.BufferGeometry().setFromPoints([
@@ -439,7 +445,7 @@ function rebuildContactGraphHelpers() {
     line.userData = spec;
     line.visible = contactGraphVisible;
     contactGraphHelpers.push(line);
-    scene.add(line);
+    modelDisplayFrame.add(line);
   }
 }
 
@@ -461,7 +467,7 @@ async function pollStepJob(jobId) {
 }
 
 function clearStepAxes() {
-  for (const helper of stepAxisHelpers.splice(0)) scene.remove(helper);
+  for (const helper of stepAxisHelpers.splice(0)) helper.removeFromParent();
 }
 
 function occurrenceMatrix(occurrence) {
@@ -505,7 +511,7 @@ function selectStepOccurrence(occurrenceId) {
     const direction = new THREE.Vector3(...axis).transformDirection(matrix).normalize();
     const helper = new THREE.ArrowHelper(direction, origin, Math.max(radiusMeters * 2.5, 0.012), 0xffc107, 0.004, 0.0025);
     helper.userData = { faceId: face.id, occurrenceId, originMeters: origin.toArray(), axis: direction.toArray() };
-    scene.add(helper);
+    modelDisplayFrame.add(helper);
     stepAxisHelpers.push(helper);
     const button = document.createElement('button');
     button.type = 'button';
@@ -526,7 +532,7 @@ function selectStepOccurrence(occurrenceId) {
     const ring = makeCircleEdgeHelper(origin, direction, radiusMeters, {
       edgeId: edge.id, occurrenceId, originMeters: origin.toArray(), axis: direction.toArray(),
     });
-    scene.add(ring);
+    modelDisplayFrame.add(ring);
     stepAxisHelpers.push(ring);
     const button = document.createElement('button');
     button.type = 'button';
@@ -1214,7 +1220,7 @@ function startAxisCorrection(joint) {
   const tools = document.getElementById('axis-correction-tools');
   tools.open = true;
   if (genericPreviewRobot) genericPreviewRobot.removeFromParent();
-  if (stepPreviewGroup && !stepPreviewGroup.parent) scene.add(stepPreviewGroup);
+  if (stepPreviewGroup && !stepPreviewGroup.parent) modelDisplayFrame.add(stepPreviewGroup);
   selectStepOccurrence(joint.actuatorOccurrenceId);
   fitRobot(stepPreviewGroup);
   tools.scrollIntoView({ behavior: 'smooth', block: 'center' });
@@ -1483,7 +1489,7 @@ function renderServoTemplateCard() {
 async function mountStepAssembly(jobId) {
   stepModeActive = true;
   runtime.ready = false;
-  if (stepPreviewGroup) scene.remove(stepPreviewGroup);
+  if (stepPreviewGroup) stepPreviewGroup.removeFromParent();
   clearStepAxes();
   [stepAssembly, stepFeatures, stepCandidates] = await Promise.all([
     fetch(`/api/step-jobs/${jobId}/artifacts/assembly.json`).then(response => {
@@ -1523,7 +1529,7 @@ async function mountStepAssembly(jobId) {
     mesh.matrixAutoUpdate = false;
     stepPreviewGroup.add(mesh);
   }
-  scene.add(stepPreviewGroup);
+  modelDisplayFrame.add(stepPreviewGroup);
   rebuildContactGraphHelpers();
   fitRobot(stepPreviewGroup);
   renderStepAssemblyList();
@@ -1658,8 +1664,8 @@ async function mountGenericPreview() {
     meshPrefix: `api/step-jobs/${activeStepJobId}/artifacts/`,
   });
   clearGenericZeroGhost();
-  if (stepPreviewGroup) scene.remove(stepPreviewGroup);
-  if (genericPreviewRobot) scene.remove(genericPreviewRobot);
+  if (stepPreviewGroup) stepPreviewGroup.removeFromParent();
+  if (genericPreviewRobot) genericPreviewRobot.removeFromParent();
   clearStepAxes();
   await new Promise((resolve, reject) => {
     const manager = new THREE.LoadingManager();
@@ -1669,7 +1675,7 @@ async function mountGenericPreview() {
     loader.parseCollision = false;
     loader.workingPath = '/';
     genericPreviewRobot = loader.parse(urdf);
-    scene.add(genericPreviewRobot);
+    modelDisplayFrame.add(genericPreviewRobot);
   });
   genericPreviewRobot.traverse(object => {
     if (!object.isMesh) return;

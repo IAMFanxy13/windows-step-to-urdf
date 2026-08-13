@@ -8,7 +8,7 @@
 
 🌍 [English](README.md)
 
-![Windows STEP-to-URDF 工作台正在显示仓库生成的两关节示例](docs/images/interface-preview.png)
+![Windows STEP-to-URDF 工作台正在测试仓库生成的桌面机械臂](docs/images/interface-preview.png)
 
 > [!IMPORTANT]
 > 当前版本是研究型候选版本，不是假装永远正确的“一键转换器”。STEP 通常保留几何和装配实例，却不一定保留原 CAD 的配合意图。不确定的轴心、运动侧、拓扑、质量和限位会明确进入复核，而不是静默猜测。
@@ -38,7 +38,7 @@ cd windows-step-to-urdf
 
 克隆后只需最后这一条启动命令。首次运行会在 `%LOCALAPPDATA%\STEPtoURDF` 创建独立 Python 环境、安装锁定的网页依赖、启动本机服务并打开浏览器。服务只监听 `127.0.0.1`。
 
-没有 STEP 文件也可以先点 **🧪 示例**；仓库内置的是专门生成的两关节 AP242 公共样例。
+没有 STEP 文件也可以先点 **🧪 示例**；仓库内置的是专门生成的桌面两关节 AP242 公共机械臂，包含底座、肩/肘舵机、上臂、前臂和固定双指夹爪。舵机本体来自 MIT 许可的公共 SG51R 模型，其余结构均由本仓库生成。
 
 ## 🧭 使用流程
 

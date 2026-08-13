@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { deriveRigidGroupsFromContactGraph, iterateRigidGroupsAndJoints } from '../src/contact-graph-controller.mjs';
 import { confirmMotionAspect, createJointMotionReviewQueue, reviewSceneSpec } from '../src/joint-review-controller.mjs';
-import { contactGraphLineSpecs, mirrorMeshPolicy, occurrenceRenderSpec } from '../src/preview-adapter.mjs';
+import { contactGraphLineSpecs, mirrorMeshPolicy, occurrenceRenderSpec, stepDisplayFrameSpec } from '../src/preview-adapter.mjs';
 import { exportBlockedByVerificationStatuses } from '../src/validation-panel.mjs';
 
 const identity = [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1];
@@ -12,6 +12,14 @@ const graph = { edges: [
 ] };
 
 describe('joint/contact graph controllers', () => {
+  it('presents CAD and URDF Z-up coordinates on the Three.js Y-up floor', () => {
+    expect(stepDisplayFrameSpec()).toEqual({
+      rotationRadians: [-Math.PI / 2, 0, 0],
+      sourceUpAxis: 'Z',
+      displayUpAxis: 'Y',
+    });
+  });
+
   it('uses a baked mesh and right-handed residual transform for mirrored occurrences', () => {
     const definition = { id: 'def-a', mesh: 'definitions/def-a.stl' };
     const occurrence = {

@@ -12,7 +12,7 @@ The result must read visually as a robot arm before the viewer reads the README 
 - Keep two revolute joints and three intended rigid links.
 - Keep the imported AP242 assembly pose as URDF `q=0`.
 - Change only repository-generated base, bracket, link, horn, and gripper geometry plus the public screenshot and related descriptions.
-- Do not add private EduBotics geometry or any unrecorded external CAD.
+- Do not add private geometry or any unrecorded external CAD.
 - Do not add extra joints, inverse kinematics, dynamics, or collision simulation.
 
 ## Visual Layout
@@ -86,7 +86,7 @@ The README image remains a real screenshot of the running application:
 4. Verify two joint candidates and three intended rigid links after template application.
 5. Run all JavaScript and Python tests, the production build, four Playwright workflows, release-boundary scan, and npm audit.
 6. Inspect the final screenshot at its native resolution and at typical GitHub README width.
-7. Verify the public tree contains no EduBotics or private CAD artifacts.
+7. Verify the public tree contains no proprietary or private CAD artifacts.
 8. Push only after local verification, then require Windows CI and CodeQL success for the final commit.
 
 ## Acceptance Criteria
@@ -96,5 +96,5 @@ The README image remains a real screenshot of the running application:
 - Both real servo bodies and both output horns remain visible.
 - No link appears fused into an unrelated moving group or detached in the zero pose.
 - Moving either joint drives only its expected downstream structure in the browser.
-- The public example remains generic, licensed, deterministic, and free of private EduBotics geometry.
+- The public example remains generic, licensed, deterministic, and free of private geometry.
 - The final README preview is generated from the actual application and actual AP242 example.
