@@ -1,6 +1,7 @@
 """Generate real XCAF STEP fixtures; no JSON or mesh substitutes are used."""
 
 import hashlib
+import math
 from pathlib import Path
 
 from OCP.BRep import BRep_Builder
@@ -17,7 +18,7 @@ from OCP.TDocStd import TDocStd_Document
 from OCP.TopLoc import TopLoc_Location
 from OCP.TopoDS import TopoDS_Compound
 from OCP.XCAFDoc import XCAFDoc_DocumentTool
-from OCP.gp import gp_Ax2, gp_Dir, gp_Pnt, gp_Trsf, gp_Vec
+from OCP.gp import gp_Ax1, gp_Ax2, gp_Dir, gp_Pnt, gp_Trsf, gp_Vec
 
 
 UNIT_TO_METRES = {
@@ -74,36 +75,64 @@ def _horn(scale):
     ).Shape()
 
 
+def _horn_y(scale):
+    return BRepPrimAPI_MakeCylinder(
+        gp_Ax2(gp_Pnt(0, 0.0026 * scale, 0), gp_Dir(0, 1, 0)),
+        0.008 * scale,
+        0.0022 * scale,
+    ).Shape()
+
+
+def _rotate_translate(shape, scale, angle_y, translation):
+    transform = gp_Trsf()
+    transform.SetRotation(gp_Ax1(gp_Pnt(0, 0, 0), gp_Dir(0, 1, 0)), angle_y)
+    transform.SetTranslationPart(gp_Vec(*(value * scale for value in translation)))
+    return BRepBuilderAPI_Transform(shape, transform, True).Shape()
+
+
+def _beam_between(scale, start, end, width_y, depth_z, y_center=0.010):
+    dx, dz = end[0] - start[0], end[2] - start[2]
+    length = math.hypot(dx, dz)
+    if length <= 0:
+        raise ValueError("Beam endpoints must be distinct")
+    beam = _box(scale, 0, y_center - width_y / 2, -depth_z / 2, length, width_y, depth_z)
+    return _rotate_translate(beam, scale, -math.atan2(dz, dx), start)
+
+
 def _make_base_structure(scale):
-    servo_bottom_world_z = 0.055 - 0.0223409303
     return _compound(
-        _box(scale, -0.020, -0.032, 0.000, 0.090, 0.064, 0.010),
-        _box(scale, 0.016, -0.014, 0.010, 0.048, 0.028, servo_bottom_world_z - 0.010),
-        _box(scale, 0.017, -0.009, servo_bottom_world_z, 0.034, 0.003, 0.021),
-        _box(scale, 0.017, 0.006, servo_bottom_world_z, 0.034, 0.003, 0.021),
+        BRepPrimAPI_MakeCylinder(0.055 * scale, 0.012 * scale).Shape(),
+        BRepPrimAPI_MakeCylinder(gp_Ax2(gp_Pnt(0, 0, 0.012 * scale), gp_Dir(0, 0, 1)), 0.043 * scale, 0.018 * scale).Shape(),
+        BRepPrimAPI_MakeCylinder(gp_Ax2(gp_Pnt(0, 0, 0.030 * scale), gp_Dir(0, 0, 1)), 0.025 * scale, 0.052 * scale).Shape(),
+        _box(scale, -0.030, -0.030, 0.082, 0.060, 0.060, 0.009),
+        _box(scale, -0.026, -0.026, 0.091, 0.052, 0.004, 0.026),
+        _box(scale, -0.026, 0.022, 0.091, 0.052, 0.004, 0.026),
+        _box(scale, -0.026, -0.022, 0.091, 0.004, 0.044, 0.026),
     )
 
 
 def _make_upper_arm_structure(scale):
-    servo_b_offset = 0.090
-    servo_bottom_local_z = -0.0223409303
+    elbow = (0.090, 0.0, 0.075)
     return _compound(
-        _horn(scale),
-        _box(scale, 0.004, -0.007, 0.0048, 0.061, 0.014, 0.004),
-        _box(scale, 0.064, -0.012, servo_bottom_local_z, 0.0048590697, 0.024, 0.0271409303),
-        _box(scale, servo_b_offset - 0.0211409303, -0.010, -0.0273409303, 0.0301818606, 0.020, 0.005),
-        _box(scale, servo_b_offset - 0.022, -0.010, -0.0223409303, 0.003, 0.020, 0.021),
-        _box(scale, servo_b_offset + 0.009, -0.010, -0.0223409303, 0.003, 0.020, 0.021),
+        _horn_y(scale),
+        _beam_between(scale, (0.004, 0, 0.004), (0.083, 0, 0.070), 0.014, 0.014),
+        _beam_between(scale, (0.010, 0, -0.006), (0.083, 0, 0.055), 0.010, 0.007, y_center=0.020),
+        BRepPrimAPI_MakeCylinder(gp_Ax2(gp_Pnt(elbow[0] * scale, 0.003 * scale, elbow[2] * scale), gp_Dir(0, 1, 0)), 0.014 * scale, 0.012 * scale).Shape(),
+        _box(scale, 0.066, -0.025, 0.052, 0.048, 0.004, 0.030),
+        _box(scale, 0.066, -0.021, 0.052, 0.004, 0.038, 0.030),
+        _box(scale, 0.066, 0.017, 0.052, 0.048, 0.004, 0.030),
     )
 
 
 def _make_forearm_structure(scale):
     return _compound(
-        _horn(scale),
-        _box(scale, 0.004, -0.007, 0.0048, 0.088, 0.014, 0.005),
-        _box(scale, 0.088, -0.016, 0.002, 0.010, 0.032, 0.015),
-        _box(scale, 0.098, -0.016, 0.004, 0.028, 0.006, 0.007),
-        _box(scale, 0.098, 0.010, 0.004, 0.028, 0.006, 0.007),
+        _horn_y(scale),
+        _beam_between(scale, (0.004, 0, 0.003), (0.112, 0, -0.027), 0.015, 0.013),
+        _beam_between(scale, (0.012, 0, -0.010), (0.108, 0, -0.037), 0.009, 0.006, y_center=0.020),
+        _box(scale, 0.108, -0.014, -0.055, 0.016, 0.028, 0.055),
+        _box(scale, 0.124, -0.010, -0.055, 0.042, 0.020, 0.009),
+        _box(scale, 0.124, -0.010, -0.009, 0.042, 0.020, 0.009),
+        _box(scale, 0.156, -0.012, -0.049, 0.010, 0.024, 0.040),
     )
 
 
@@ -239,17 +268,23 @@ def write_two_joint_servo_arm(target: Path, source_unit: str = "millimetre") -> 
     assembly = shape_tool.NewShape()
     TDataStd_Name.Set_s(assembly, TCollection_ExtendedString("two_joint_servo_arm"))
 
-    def add(label, name, x, z=0.055):
+    def add(label, name, x, z, rotate_x=0.0):
         transform = gp_Trsf()
-        transform.SetTranslation(gp_Vec(x * scale, 0, z * scale))
+        if rotate_x:
+            transform.SetRotation(gp_Ax1(gp_Pnt(0, 0, 0), gp_Dir(1, 0, 0)), rotate_x)
+            transform.SetTranslationPart(gp_Vec(x * scale, 0, z * scale))
+        else:
+            transform.SetTranslation(gp_Vec(x * scale, 0, z * scale))
         occurrence = shape_tool.AddComponent(assembly, label, TopLoc_Location(transform))
         TDataStd_Name.Set_s(occurrence, TCollection_ExtendedString(name))
 
+    shoulder = (0.0, 0.105)
+    elbow = (0.090, 0.180)
     add(base_label, "base", 0.0, 0.0)
-    add(servo_label, "servo_a", 0.04)
-    add(upper_arm_label, "upper_arm", 0.04)
-    add(servo_label, "servo_b", 0.13)
-    add(forearm_label, "forearm", 0.13)
+    add(servo_label, "servo_a", *shoulder, rotate_x=-math.pi / 2)
+    add(upper_arm_label, "upper_arm", *shoulder)
+    add(servo_label, "servo_b", *elbow, rotate_x=-math.pi / 2)
+    add(forearm_label, "forearm", *elbow)
     shape_tool.UpdateAssemblies()
 
     writer = STEPCAFControl_Writer()

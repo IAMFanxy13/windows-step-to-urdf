@@ -144,6 +144,24 @@ class StepImportTests(unittest.TestCase):
             servo_occurrences = [item for item in parts if item["definitionId"] == servo_definition_id]
             self.assertEqual([item["name"] for item in servo_occurrences], ["servo_a", "servo_b"])
 
+            occurrences = {item["name"]: item for item in parts}
+            servo_a_origin = [occurrences["servo_a"]["sourceTransformMeters"][index] for index in (3, 7, 11)]
+            servo_b_origin = [occurrences["servo_b"]["sourceTransformMeters"][index] for index in (3, 7, 11)]
+            self.assertGreater(servo_a_origin[2], 0.09, "shoulder servo must sit on a raised pedestal")
+            self.assertGreater(servo_b_origin[0], servo_a_origin[0] + 0.07, "elbow must be separated from shoulder")
+            self.assertGreater(servo_b_origin[2], servo_a_origin[2] + 0.06, "upper arm must rise toward the elbow")
+            for occurrence in servo_occurrences:
+                world_output_axis = [round(occurrence["sourceTransformMeters"][index], 8) for index in (2, 6, 10)]
+                self.assertEqual(world_output_axis, [0.0, 1.0, 0.0], "servo output must face across the arm plane")
+
+            base_bounds = definitions["base_structure"]["boundsMeters"]
+            self.assertGreater(base_bounds["max"][2] - base_bounds["min"][2], 0.10)
+            forearm = definitions["forearm_structure"]
+            forearm_bounds = forearm["boundsMeters"]
+            self.assertGreater(forearm_bounds["max"][0] - forearm_bounds["min"][0], 0.14)
+            self.assertGreater(forearm_bounds["max"][2] - forearm_bounds["min"][2], 0.035)
+            self.assertGreater(forearm["faceCount"], 30, "palm and two separated fingers must add visible topology")
+
             servo_contact_edges = [
                 edge for edge in result["contactGraph"]["edges"]
                 if edge["a"] in {item["id"] for item in servo_occurrences}
@@ -179,8 +197,8 @@ class StepImportTests(unittest.TestCase):
                 self.assertTrue(horn_faces, f"{structure_name} is missing its generated output horn")
                 horn = horn_faces[0]["cylinder"]
                 self.assertAlmostEqual(horn["originMeters"][0], 0.0, places=8)
-                self.assertAlmostEqual(horn["originMeters"][1], 0.0, places=8)
-                self.assertEqual([round(value, 8) for value in horn["axis"]], [0.0, 0.0, 1.0])
+                self.assertAlmostEqual(horn["originMeters"][2], 0.0, places=8)
+                self.assertEqual([round(value, 8) for value in horn["axis"]], [0.0, 1.0, 0.0])
 
             self.assertEqual(len(candidates["jointCandidates"]), 2)
             self.assertEqual(len(candidates["rigidGroupCandidates"]), 2)
