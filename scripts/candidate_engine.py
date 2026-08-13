@@ -5,7 +5,7 @@ from __future__ import annotations
 import json
 import math
 import hashlib
-from collections import Counter, defaultdict
+from collections import Counter, defaultdict, deque
 from pathlib import Path
 
 
@@ -63,6 +63,27 @@ def _world_bounds(occurrence, definition):
                 ])
     return {"min": [min(point[i] for point in corners) for i in range(3)],
             "max": [max(point[i] for point in corners) for i in range(3)]}
+
+
+def _contact_graph_distances(contact_graph, root_id, excluded_id=None):
+    adjacency = defaultdict(set)
+    for edge in contact_graph.get("edges", []):
+        if edge.get("fastenerSuppressed") or edge.get("interfaceClass") == "CLEARANCE":
+            continue
+        left, right = edge.get("a"), edge.get("b")
+        if not left or not right or excluded_id in {left, right}:
+            continue
+        adjacency[left].add(right)
+        adjacency[right].add(left)
+    distances = {root_id: 0}
+    queue = deque([root_id])
+    while queue:
+        current = queue.popleft()
+        for neighbor in adjacency[current]:
+            if neighbor not in distances:
+                distances[neighbor] = distances[current] + 1
+                queue.append(neighbor)
+    return distances
 
 
 def _geometry_fingerprint(definition, faces):
@@ -134,6 +155,14 @@ def generate_candidates(assembly: dict, features: dict) -> dict:
             circles_by_definition[definition_id].append(edge)
 
     definitions = {item["id"]: item for item in assembly.get("definitions", [])}
+    root_recommendation = None
+    if occurrences:
+        def root_score(item):
+            bounds = _world_bounds(item, definitions.get(item.get("definitionId"), {}))
+            footprint = max(0.0, bounds["max"][0] - bounds["min"][0]) * max(0.0, bounds["max"][1] - bounds["min"][1])
+            volume = definitions.get(item.get("definitionId"), {}).get("massProperties", {}).get("volumeCubicMeters", 0.0)
+            return (round(bounds["min"][2], 6), -footprint, -volume)
+        root_recommendation = min(occurrences, key=root_score)
     families, candidates, rigid_group_candidates = [], [], []
     for definition_id, count in sorted(definition_counts.items()):
         cylinders = cylinders_by_definition.get(definition_id, [])
@@ -273,6 +302,19 @@ def generate_candidates(assembly: dict, features: dict) -> dict:
             output_neighbor_id = exact_contact_records[0]["neighborId"] if exact_contact_records else (graph_neighbors[0] if graph_neighbors else None)
             housing_records = [item for item in exact_contact_records if item["neighborId"] != output_neighbor_id]
             housing_neighbor_id = (max(housing_records, key=lambda item: (item["distanceToOutputMeters"], item["edge"].get("contactAreaSquareMeters", 0)))["neighborId"] if housing_records else None)
+            root_oriented_fallback = False
+            if not exact_contact_records and root_recommendation and len(graph_neighbors) >= 2:
+                distances = _contact_graph_distances(
+                    assembly.get("contactGraph", {}), root_recommendation["id"], excluded_id=occurrence["id"]
+                )
+                ranked_neighbors = sorted(
+                    graph_neighbors,
+                    key=lambda neighbor_id: (distances.get(neighbor_id, math.inf), neighbor_id),
+                )
+                if distances.get(ranked_neighbors[0], math.inf) < distances.get(ranked_neighbors[-1], math.inf):
+                    housing_neighbor_id = ranked_neighbors[0]
+                    output_neighbor_id = ranked_neighbors[-1]
+                    root_oriented_fallback = True
             if housing_neighbor_id is None:
                 housing_neighbor_id = next((item["id"] for item in fallback_near if item["id"] != output_neighbor_id), None)
             ordered_neighbor_ids = [item for item in (housing_neighbor_id, output_neighbor_id) if item in neighbor_map]
@@ -304,7 +346,7 @@ def generate_candidates(assembly: dict, features: dict) -> dict:
                 "housingSideOccurrenceIds": ([housing_neighbor_id] if housing_neighbor_id else []),
                 "outputSideOccurrenceIds": ([output_neighbor_id] if output_neighbor_id else []),
                 "outputPortContactClassification": {
-                    "method": ("EXACT_BREP_CONTACT_CENTER" if exact_contact_records and all(item["centerMethod"] == "EXACT_COMMON_SURFACE_CENTER" for item in exact_contact_records) else "EXACT_BREP_INTERFACE_POINT" if exact_contact_records else "PROXIMITY_FALLBACK_REQUIRES_REVIEW"),
+                    "method": ("EXACT_BREP_CONTACT_CENTER" if exact_contact_records and all(item["centerMethod"] == "EXACT_COMMON_SURFACE_CENTER" for item in exact_contact_records) else "EXACT_BREP_INTERFACE_POINT" if exact_contact_records else "ROOT_ORIENTED_CONTACT_GRAPH_FALLBACK_REQUIRES_REVIEW" if root_oriented_fallback else "PROXIMITY_FALLBACK_REQUIRES_REVIEW"),
                     "outputOccurrenceId": output_neighbor_id,
                     "housingOccurrenceId": housing_neighbor_id,
                     "outputDistanceMeters": exact_contact_records[0]["distanceToOutputMeters"] if exact_contact_records else None,
@@ -330,14 +372,6 @@ def generate_candidates(assembly: dict, features: dict) -> dict:
                     "source": "automatic_actuator_fixed_side_grouping",
                     "lastModifiedBy": "automatic_system",
                 })
-    root_recommendation = None
-    if occurrences:
-        def root_score(item):
-            bounds = _world_bounds(item, definitions.get(item.get("definitionId"), {}))
-            footprint = max(0.0, bounds["max"][0] - bounds["min"][0]) * max(0.0, bounds["max"][1] - bounds["min"][1])
-            volume = definitions.get(item.get("definitionId"), {}).get("massProperties", {}).get("volumeCubicMeters", 0.0)
-            return (round(bounds["min"][2], 6), -footprint, -volume)
-        root_recommendation = min(occurrences, key=root_score)
     ranked_families = sorted(families, key=lambda item: (-item["confidenceScore"], item["definitionId"]))
     active_servo_families = [item for item in ranked_families if item["candidateClass"] == "SERVO_LIKELY"]
     if not active_servo_families:

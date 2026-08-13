@@ -203,8 +203,17 @@ class StepImportTests(unittest.TestCase):
             self.assertEqual(len(candidates["jointCandidates"]), 2)
             self.assertEqual(len(candidates["rigidGroupCandidates"]), 2)
             self.assertTrue(all(item["topologyAlternatives"] for item in candidates["jointCandidates"]))
+            occurrence_names = {item["id"]: item["name"] for item in parts}
+            self.assertEqual(
+                [occurrence_names[item["outputSideOccurrenceIds"][0]] for item in candidates["jointCandidates"]],
+                ["upper_arm", "forearm"],
+            )
+            self.assertEqual(
+                [occurrence_names[item["housingSideOccurrenceIds"][0]] for item in candidates["jointCandidates"]],
+                ["base", "upper_arm"],
+            )
             self.assertTrue(all(
-                item["outputPortContactClassification"]["method"] == "PROXIMITY_FALLBACK_REQUIRES_REVIEW"
+                item["outputPortContactClassification"]["method"] == "ROOT_ORIENTED_CONTACT_GRAPH_FALLBACK_REQUIRES_REVIEW"
                 and item["outputPortContactClassification"]["confidence"] == "LOW"
                 for item in candidates["jointCandidates"]
             ))
