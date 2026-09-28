@@ -26,7 +26,7 @@
   "dependencies": {
     "csv-parse": "^6.1.0",
     "fast-xml-parser": "^5.3.6",
-    "three": "^0.164.1",
+    "three": "^0.185.1",
     "three-mesh-bvh": "^0.9.13",
     "urdf-loader": "0.13.1",
     "yaml": "^2.8.1"
